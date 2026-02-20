@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Housewarming Gift</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f4f4f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input, textarea, button { width: 100%; margin: 10px 0; padding: 12px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+        button { background: #0070f3; color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #005bb5; }
+        .hidden { display: none; }
+        #result { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 6px; font-family: monospace; white-space: pre-wrap; word-break: break-all; margin-top: 15px; color: #166534; font-size: 1.1em;}
+        .instruction { color: #555; font-size: 0.95em; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🎉 Happy Housewarming!</h2>
+        
+        <div id="decrypt-view" class="hidden">
+            <p class="instruction">Scan successful! To reveal your e-voucher, please authenticate below.</p>
+            <input type="password" id="unlock-empid" placeholder="Enter your TCS Employee ID">
+            <button onclick="decrypt()">Unlock Gift</button>
+            <div id="result" class="hidden"></div>
+        </div>
+
+        <div id="generate-view" class="hidden">
+            <p class="instruction" style="color: #d97706;"><strong>Admin Setup:</strong> Encrypt the voucher details.</p>
+            <textarea id="voucher-data" rows="3" placeholder="Paste Voucher URL, Code, and PIN here..."></textarea>
+            <input type="password" id="setup-empid" placeholder="Enter Lead's TCS Employee ID">
+            <button onclick="generate()">Generate Secure Link</button>
+            <textarea id="generated-link" rows="4" readonly class="hidden" onclick="this.select()" style="margin-top: 15px; background: #f9fafb; font-size: 0.85em;"></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Check if there is an encrypted payload in the URL
+        const hash = window.location.hash.substring(1);
+        
+        if (hash) {
+            document.getElementById('decrypt-view').classList.remove('hidden');
+        } else {
+            document.getElementById('generate-view').classList.remove('hidden');
+        }
+
+        function generate() {
+            const data = document.getElementById('voucher-data').value;
+            const empId = document.getElementById('setup-empid').value;
+            if (!data || !empId) return alert("Please enter both the voucher details and the Employee ID.");
+            
+            // Encrypt data with the Employee ID
+            const encrypted = CryptoJS.AES.encrypt(data, empId).toString();
+            // Build the URL with the encrypted payload in the hash
+            const link = window.location.origin + window.location.pathname + "#" + encodeURIComponent(encrypted);
+            
+            const linkEl = document.getElementById('generated-link');
+            linkEl.value = link;
+            linkEl.classList.remove('hidden');
+            
+            // Optional UX enhancement: auto-copy to clipboard
+            navigator.clipboard.writeText(link).then(() => {
+                alert("Secure link generated and copied to clipboard! You can now turn this link into a QR code.");
+            }).catch(err => {
+                console.log('Something went wrong copying to clipboard', err);
+            });
+        }
+
+        function decrypt() {
+            const empId = document.getElementById('unlock-empid').value;
+            if (!empId) return;
+            
+            try {
+                const encrypted = decodeURIComponent(hash);
+                // Decrypt using the provided Employee ID
+                const decryptedBytes = CryptoJS.AES.decrypt(encrypted, empId);
+                const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+                
+                if (!decryptedText) throw new Error("Invalid Employee ID");
+                
+                const resultEl = document.getElementById('result');
+                resultEl.innerText = decryptedText;
+                resultEl.classList.remove('hidden');
+                
+                // Hide inputs after successful unlock
+                document.getElementById('unlock-empid').classList.add('hidden');
+                document.querySelector('#decrypt-view button').classList.add('hidden');
+                document.querySelector('#decrypt-view .instruction').innerText = "Here are your gift details. Enjoy the new home!";
+            } catch (e) {
+                alert("Authentication failed! Please ensure you entered the correct Employee ID.");
+            }
+        }
+    </script>
+</body>
+</html>
