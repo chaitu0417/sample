@@ -1,97 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Secure Housewarming Gift</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #f4f4f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        input, textarea, button { width: 100%; margin: 10px 0; padding: 12px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
-        button { background: #0070f3; color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.2s; }
-        button:hover { background: #005bb5; }
-        .hidden { display: none; }
-        #result { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 6px; font-family: monospace; white-space: pre-wrap; word-break: break-all; margin-top: 15px; color: #166534; font-size: 1.1em;}
-        .instruction { color: #555; font-size: 0.95em; margin-bottom: 20px; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>🎉 Happy Housewarming!</h2>
-        
-        <div id="decrypt-view" class="hidden">
-            <p class="instruction">Scan successful! To reveal your e-voucher, please authenticate below.</p>
-            <input type="password" id="unlock-empid" placeholder="Enter your TCS Employee ID">
-            <button onclick="decrypt()">Unlock Gift</button>
-            <div id="result" class="hidden"></div>
-        </div>
 
-        <div id="generate-view" class="hidden">
-            <p class="instruction" style="color: #d97706;"><strong>Admin Setup:</strong> Encrypt the voucher details.</p>
-            <textarea id="voucher-data" rows="3" placeholder="Paste Voucher URL, Code, and PIN here..."></textarea>
-            <input type="password" id="setup-empid" placeholder="Enter Lead's TCS Employee ID">
-            <button onclick="generate()">Generate Secure Link</button>
-            <textarea id="generated-link" rows="4" readonly class="hidden" onclick="this.select()" style="margin-top: 15px; background: #f9fafb; font-size: 0.85em;"></textarea>
-        </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        /* CLEAN, PROFESSIONAL BACKGROUND */
+        background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        color: #334155;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 40px 35px;
+        border-radius: 20px;
+        /* Deeper, softer shadow for premium feel */
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08),
+          0 1px 3px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(10px);
+        width: 90%;
+        max-width: 420px;
+        text-align: center;
+        animation: slideUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(60px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20%,
+        60% {
+          transform: translateX(-6px);
+        }
+        40%,
+        80% {
+          transform: translateX(6px);
+        }
+      }
+      .shake {
+        animation: shake 0.3s ease-in-out;
+      }
+
+      h2 {
+        margin-top: 0;
+        color: #0f172a;
+        font-size: 2em;
+        margin-bottom: 15px;
+        letter-spacing: -0.5px;
+      }
+      .instruction {
+        color: #64748b;
+        font-size: 1.05em;
+        margin-bottom: 30px;
+        line-height: 1.6;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        margin: 10px 0 25px;
+        padding: 16px;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        box-sizing: border-box;
+        font-size: 16px;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+      }
+      input:focus,
+      textarea:focus {
+        /* NEW ACCENT COLOR: TEAL */
+        border-color: #0d9488;
+        outline: none;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+      }
+
+      button {
+        width: 100%;
+        padding: 16px;
+        /* NEW ACCENT COLOR: TEAL */
+        background: #0d9488;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 17px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.2),
+          0 2px 4px -1px rgba(13, 148, 136, 0.1);
+      }
+      button:hover {
+        background: #0f766e;
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.3),
+          0 4px 6px -2px rgba(13, 148, 136, 0.1);
+      }
+      button:active {
+        transform: translateY(-1px);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      #result {
+        /* Clean, professional result box */
+        background: #f0fdfa; /* Very light teal background */
+        border: 2px dashed #ccfbf1;
+        padding: 25px;
+        border-radius: 12px;
+        font-family: "Courier New", Courier, monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin-top: 30px;
+        color: #065f46; /* Dark teal text */
+        font-size: 1.3em;
+        font-weight: bold;
+        animation: slideUp 0.5s ease-out;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card" id="main-card">
+      <h2>🎉 Happy Housewarming!</h2>
+
+      <div id="decrypt-view" class="hidden">
+        <p class="instruction" id="decrypt-instruction">
+          Welcome! To securely unlock your e-gift, please enter the passcode ( Employee ID) below.
+        </p>
+        <input
+          type="password"
+          id="unlock-empid"
+          placeholder="Enter the Passcode"
+        />
+        <button onclick="decrypt()">Unlock Gift</button>
+        <div id="result" class="hidden"></div>
+      </div>
+
+      <div id="generate-view" class="hidden">
+        <p
+          class="instruction"
+          style="
+            color: #0f766e;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 0.9em;
+          "
+        >
+          Admin Configuration
+        </p>
+        <textarea
+          id="voucher-data"
+          rows="3"
+          placeholder="Paste Voucher URL, Code, and PIN here..."
+        ></textarea>
+        <input type="text" id="setup-empid" placeholder="Set the password" />
+        <button onclick="generate()">Generate Encrypted Link</button>
+        <textarea
+          id="generated-link"
+          rows="4"
+          readonly
+          class="hidden"
+          onclick="this.select()"
+          style="
+            margin-top: 25px;
+            background: #f1f5f9;
+            font-size: 0.85em;
+            font-family: monospace;
+            border: 1px solid #cbd5e1;
+            cursor: pointer;
+          "
+          placeholder="Your encrypted link will appear here..."
+        ></textarea>
+      </div>
     </div>
 
     <script>
-        // Check if there is an encrypted payload in the URL
-        const hash = window.location.hash.substring(1);
-        
-        if (hash) {
-            document.getElementById('decrypt-view').classList.remove('hidden');
-        } else {
-            document.getElementById('generate-view').classList.remove('hidden');
+      // Check if there is an encrypted payload in the URL
+      const hash = window.location.hash.substring(1);
+
+      if (hash) {
+        document.getElementById("decrypt-view").classList.remove("hidden");
+      } else {
+        document.getElementById("generate-view").classList.remove("hidden");
+      }
+
+      function generate() {
+        const data = document.getElementById("voucher-data").value;
+        const empId = document.getElementById("setup-empid").value;
+
+        if (!data || !empId) {
+          triggerError();
+          return;
         }
 
-        function generate() {
-            const data = document.getElementById('voucher-data').value;
-            const empId = document.getElementById('setup-empid').value;
-            if (!data || !empId) return alert("Please enter both the voucher details and the Employee ID.");
-            
-            // Encrypt data with the Employee ID
-            const encrypted = CryptoJS.AES.encrypt(data, empId).toString();
-            // Build the URL with the encrypted payload in the hash
-            const link = window.location.origin + window.location.pathname + "#" + encodeURIComponent(encrypted);
-            
-            const linkEl = document.getElementById('generated-link');
-            linkEl.value = link;
-            linkEl.classList.remove('hidden');
-            
-            // Optional UX enhancement: auto-copy to clipboard
-            navigator.clipboard.writeText(link).then(() => {
-                alert("Secure link generated and copied to clipboard! You can now turn this link into a QR code.");
-            }).catch(err => {
-                console.log('Something went wrong copying to clipboard', err);
-            });
+        const encrypted = CryptoJS.AES.encrypt(data, empId).toString();
+        const link =
+          window.location.origin +
+          window.location.pathname +
+          "#" +
+          encodeURIComponent(encrypted);
+
+        const linkEl = document.getElementById("generated-link");
+        linkEl.value = link;
+        linkEl.classList.remove("hidden");
+
+        // Auto-copy with a small visual feedback
+        navigator.clipboard.writeText(link).then(() => {
+          const btn = document.querySelector("#generate-view button");
+          const originalText = btn.innerText;
+          btn.innerText = "✓ Link Copied Securely!";
+          btn.style.background = "#059669"; // Green success color
+          setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.background = "";
+          }, 2000);
+        });
+      }
+
+      function triggerConfetti() {
+        var duration = 3000;
+        var end = Date.now() + duration;
+
+        (function frame() {
+          // Changed confetti colors to match the new professional teal/gold theme
+          confetti({
+            particleCount: 5,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: ["#0d9488", "#f59e0b", "#06b6d4", "#ffffff"],
+          });
+          confetti({
+            particleCount: 5,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: ["#0d9488", "#f59e0b", "#06b6d4", "#ffffff"],
+          });
+
+          if (Date.now() < end) {
+            requestAnimationFrame(frame);
+          }
+        })();
+      }
+
+      function triggerError() {
+        const card = document.getElementById("main-card");
+        card.classList.remove("shake");
+        void card.offsetWidth; // trigger reflow to restart animation
+        card.classList.add("shake");
+
+        const input = document.getElementById("unlock-empid");
+        if (input) {
+          input.style.borderColor = "#ef4444";
+          input.style.background = "#fef2f2";
+          setTimeout(() => {
+            input.style.borderColor = "#e2e8f0";
+            input.style.background = "#f8fafc";
+          }, 1000);
+        }
+      }
+
+      function decrypt() {
+        const empId = document.getElementById("unlock-empid").value;
+        if (!empId) {
+          triggerError();
+          return;
         }
 
-        function decrypt() {
-            const empId = document.getElementById('unlock-empid').value;
-            if (!empId) return;
-            
-            try {
-                const encrypted = decodeURIComponent(hash);
-                // Decrypt using the provided Employee ID
-                const decryptedBytes = CryptoJS.AES.decrypt(encrypted, empId);
-                const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
-                
-                if (!decryptedText) throw new Error("Invalid Employee ID");
-                
-                const resultEl = document.getElementById('result');
-                resultEl.innerText = decryptedText;
-                resultEl.classList.remove('hidden');
-                
-                // Hide inputs after successful unlock
-                document.getElementById('unlock-empid').classList.add('hidden');
-                document.querySelector('#decrypt-view button').classList.add('hidden');
-                document.querySelector('#decrypt-view .instruction').innerText = "Here are your gift details. Enjoy the new home!";
-            } catch (e) {
-                alert("Authentication failed! Please ensure you entered the correct Employee ID.");
-            }
+        try {
+          const encrypted = decodeURIComponent(hash);
+          const decryptedBytes = CryptoJS.AES.decrypt(encrypted, empId);
+          const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+          if (!decryptedText) throw new Error("Invalid Employee ID");
+
+          // Success state
+          const resultEl = document.getElementById("result");
+          resultEl.innerText = decryptedText;
+          resultEl.classList.remove("hidden");
+
+          document.getElementById("unlock-empid").classList.add("hidden");
+          document
+            .querySelector("#decrypt-view button")
+            .classList.add("hidden");
+
+          const instruction = document.getElementById("decrypt-instruction");
+          instruction.innerHTML =
+            "Congratulations on the new home!<br>Here are your gift card details:";
+          instruction.style.color = "#0d9488";
+          instruction.style.fontWeight = "bold";
+          instruction.style.fontSize = "1.2em";
+
+          triggerConfetti();
+        } catch (e) {
+          triggerError();
+          document.getElementById("unlock-empid").value = "";
+          document.getElementById("unlock-empid").placeholder =
+            "Authentication failed. Try again.";
         }
+      }
     </script>
-</body>
+  </body>
 </html>
